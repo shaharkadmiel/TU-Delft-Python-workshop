@@ -2,17 +2,17 @@ class BestBeam():
     """
     Class to handle beamforming results.
     """
-    
+
     def __init__(self, filename):
         """
         Constructor of the object.
-        
+
         Parameters
         ----------
         filename : str
             Path (relative or absolute) to the filename.
         """
-        
+
         self.filename = filename
         self.path, self.file = os.path.split(filename)  # get the relative path
         with open(filename) as f:
@@ -22,12 +22,12 @@ class BestBeam():
                     self._line_parser(line)
                 else:
                     break
-                    
+
         self.time, self.fratio, self.baz, self.app_vel = np.loadtxt(
             filename, usecols=range(4)).T
-        
-        self.bb_wf = obspy.read(os.path.join(path, self.bestbeam))[0]
-        
+
+        self.bb_wf = obspy.read(os.path.join(self.path, self.bestbeam))[0]
+
     def _line_parser(self, line):
         key, value = [item.strip('# ') for item in line.split('=')]
         try:  # convert single float value
@@ -39,24 +39,24 @@ class BestBeam():
                 pass
 
         vars(self)[key] = value
-        
+
     def plot_data(self, sort_by='fratio', s=5, cmap='inferno_r',
                   **kwargs):
-        
+
         # your code here: (approx 12 lines)
         sort_idx = vars(self)[sort_by].argsort()
-        
+
         fig, ax = plt.subplots(4, sharex=True, figsize=(7, 7))
         ax[0].plot(self.bb_wf.times(), self.bb_wf.data, 'k', lw=0.5)
-        
+
         for axi, item in zip(ax[1:], [self.app_vel, self.baz, self.fratio]):
             sc = axi.scatter(
                 self.time[sort_idx], item[sort_idx], s, c=self.fratio[sort_idx],
                 cmap=cmap, **kwargs)
-            
+
         plt.colorbar(sc, ax=ax, orientation='horizontal', aspect=40,
                      extend='both', pad=0.1, label='Fisher Ratio')
-            
+
         ax[0].set_ylabel('P, Pa')
         ax[1].set_ylabel('App. Vel., m/s')
         ax[2].set_ylabel(u'BAZ, °')
@@ -66,10 +66,10 @@ class BestBeam():
         ax[3].set_xlabel('Time, s')
         # end your code
         return fig, ax
-    
+
     def plot_map(self, projection='aea', wfactor=1, hfactor=1,
                  meridians_every=5, parallels_every=5):
-        
+
         fig, ax = plt.subplots(figsize=(8, 8))
         station_lat, station_lon, station_elev = self.station
         source_lat, source_lon, source_depth, magnitude = self.source
@@ -82,7 +82,7 @@ class BestBeam():
             height=hfactor * 1.5 * self.distance * 1e3,
             projection=projection, resolution='c'
         )
-        
+
         m.etopo(zorder=0, interpolation='bilinear')
         m.drawmeridians(
             np.arange(round(m.lonmin, -1),
@@ -103,7 +103,7 @@ class BestBeam():
         ax.text(x, y, u'{}\nBAZ:{:.2f}°\nDistance: {:.0f} km'.format(
             self.name, self.true_baz, self.distance),
                 ha='left', va='center')
-        
+
         m.scatter(source_lon, source_lat, s=200, marker='*',
                   c='none', edgecolors='k',
                   latlon=True, zorder=1, clip_on=False)
@@ -111,7 +111,7 @@ class BestBeam():
         ax.text(x, y, 'Mw{}, Depth: {:.0f} km\n{}'.format(
             magnitude, source_depth, self.origintime[:-6]),
                 ha='left', va='center')
-        
+
         m.drawgreatcircle(source_lon, source_lat, station_lon, station_lat,
                          color='k')
         # end your code
