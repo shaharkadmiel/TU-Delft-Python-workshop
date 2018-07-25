@@ -1,0 +1,20 @@
+def file_parser(filename, comment='#'):
+    file_contents = {}
+    with open(filename) as f:
+        
+        # your code here: (approx 8 lines)
+        for line in f:
+            line = line.split(comment)[0].strip()
+            if not line:
+                continue
+
+            name, contents = line_parser(line)
+
+            try:
+                file_contents[name].append(contents)
+            except KeyError:
+                file_contents[name] = [contents]
+        # end your code
+    return file_contents
+
+file_parser('data/berkeley.sw4')

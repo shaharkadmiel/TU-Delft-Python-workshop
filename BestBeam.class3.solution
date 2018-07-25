@@ -1,0 +1,118 @@
+class BestBeam():
+    """
+    Class to handle beamforming results.
+    """
+    
+    def __init__(self, filename):
+        """
+        Constructor of the object.
+        
+        Parameters
+        ----------
+        filename : str
+            Path (relative or absolute) to the filename.
+        """
+        
+        self.filename = filename
+        self.path, self.file = os.path.split(filename)  # get the relative path
+        with open(filename) as f:
+            for line in f:
+                line = line.strip()  # get rid of whitespace at start and end
+                if line.startswith('#'):
+                    self._line_parser(line)
+                else:
+                    break
+                    
+        self.time, self.fratio, self.baz, self.app_vel = np.loadtxt(
+            filename, usecols=range(4)).T
+        
+        self.bb_wf = obspy.read(os.path.join(path, self.bestbeam))[0]
+        
+    def _line_parser(self, line):
+        key, value = [item.strip('# ') for item in line.split('=')]
+        try:  # convert single float value
+            value = float(value)
+        except ValueError:  # convert multiple float values
+            try:
+                value = [float(item.strip('() ')) for item in value.split(',')]
+            except ValueError:  # leave as tring
+                pass
+
+        vars(self)[key] = value
+        
+    def plot_data(self, sort_by='fratio', s=5, cmap='inferno_r',
+                  **kwargs):
+        
+        # your code here: (approx 12 lines)
+        sort_idx = vars(self)[sort_by].argsort()
+        
+        fig, ax = plt.subplots(4, sharex=True, figsize=(7, 7))
+        ax[0].plot(self.bb_wf.times(), self.bb_wf.data, 'k', lw=0.5)
+        
+        for axi, item in zip(ax[1:], [self.app_vel, self.baz, self.fratio]):
+            sc = axi.scatter(
+                self.time[sort_idx], item[sort_idx], s, c=self.fratio[sort_idx],
+                cmap=cmap, **kwargs)
+            
+        plt.colorbar(sc, ax=ax, orientation='horizontal', aspect=40,
+                     extend='both', pad=0.1, label='Fisher Ratio')
+            
+        ax[0].set_ylabel('P, Pa')
+        ax[1].set_ylabel('App. Vel., m/s')
+        ax[2].set_ylabel(u'BAZ, °')
+        ax[2].hlines(self.true_baz, self.time[0], self.time[-1],
+                     alpha=0.5, lw=0.5)
+        ax[3].set_ylabel('F-ratio')
+        ax[3].set_xlabel('Time, s')
+        # end your code
+        return fig, ax
+    
+    def plot_map(self, projection='aea', wfactor=1, hfactor=1,
+                 meridians_every=5, parallels_every=5):
+        
+        fig, ax = plt.subplots(figsize=(8, 8))
+        station_lat, station_lon, station_elev = self.station
+        source_lat, source_lon, source_depth, magnitude = self.source
+        lat_0 = 0.5 * (station_lat + source_lat)
+        lon_0 = 0.5 * (station_lon + source_lon)
+
+        m = Basemap(
+            lon_0=lon_0, lat_0=lat_0,
+            width=wfactor * 1.5 * self.distance * 1e3,
+            height=hfactor * 1.5 * self.distance * 1e3,
+            projection=projection, resolution='c'
+        )
+        
+        m.etopo(zorder=0, interpolation='bilinear')
+        m.drawmeridians(
+            np.arange(round(m.lonmin, -1),
+                      round(m.lonmax, -1),
+                      meridians_every), labels=(0,0,1,1), labelstyle="+/-"
+        )
+        m.drawparallels(
+            np.arange(round(m.latmin, -1),
+                      round(m.latmax, -1),
+                      parallels_every), labels=(1,1,0,0), labelstyle="+/-"
+        )
+
+        # your code here: (approx 7 lines)
+        m.scatter(station_lon, station_lat, s=150, marker='^',
+                  c='none', edgecolors='k',
+                  latlon=True, zorder=1, clip_on=False)
+        x, y = m(station_lon + 0.9, station_lat)
+        ax.text(x, y, u'{}\nBAZ:{:.2f}°\nDistance: {:.0f} km'.format(
+            self.name, self.true_baz, self.distance),
+                ha='left', va='center')
+        
+        m.scatter(source_lon, source_lat, s=200, marker='*',
+                  c='none', edgecolors='k',
+                  latlon=True, zorder=1, clip_on=False)
+        x, y = m(source_lon + 0.9, source_lat)
+        ax.text(x, y, 'Mw{}, Depth: {:.0f} km\n{}'.format(
+            magnitude, source_depth, self.origintime[:-6]),
+                ha='left', va='center')
+        
+        m.drawgreatcircle(source_lon, source_lat, station_lon, station_lat,
+                         color='k')
+        # end your code
+        return fig, ax, m

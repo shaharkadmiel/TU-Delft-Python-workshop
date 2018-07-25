@@ -1,0 +1,20 @@
+line = 'rec x=12000 y=11000 depth=0 file=surface_x=12000_y=11000_z=0_ writeEvery=100 nsew=0 variables=velocity\n'
+
+def line_parser(line):
+    line = line.split()
+    name = line.pop(0)
+    contents = {}
+    
+    # your code here: (approx 6 lines)
+    for item in line:
+        key, value = item.split('=', 1)
+        try:
+            value = float(value)
+        except ValueError:
+            pass
+
+        contents[key] = value
+    # end your code
+    return name, contents
+
+line_parser(line)

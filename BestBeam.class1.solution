@@ -1,0 +1,45 @@
+class BestBeam():
+    """
+    Class to handle beamforming results.
+    """
+    
+    def __init__(self, filename):
+        """
+        Constructor of the object.
+        
+        Parameters
+        ----------
+        filename : str
+            Path (relative or absolute) to the filename.
+        """
+        
+        self.filename = filename
+        
+        # **Part 2:** your code here: (approx 8 lines)
+        with open(filename) as f:
+            for line in f:
+                line = line.strip()  # get rid of whitespace at start and end
+                if line.startswith('#'):
+                    self._line_parser(line)
+                else:
+                    break
+                    
+        self.time, self.fratio, self.baz, self.app_vel = np.loadtxt(
+            filename, usecols=range(4)).T
+        # end of part 2
+        
+    def _line_parser(self, line):
+        # **Part 1:** your code here: (approx 9 lines)
+        key, value = [item.strip('# ') for item in line.split('=')]
+        try:  # convert single float value
+            value = float(value)
+        except ValueError:  # convert multiple float values
+            try:
+                value = [float(item.strip('() ')) for item in value.split(',')]
+            except ValueError:  # leave as tring
+                pass
+
+        vars(self)[key] = value
+        # end of part 1
+        
+BestBeam('data/IM.I53US.jtdfd')

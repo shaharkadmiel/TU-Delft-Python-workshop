@@ -1,0 +1,20 @@
+# here are three different lines to consider:
+line1 = '# distance = 984.9975957679702'
+line2 = '# station = (64.866929, -147.85810087500002, 175.0625)'
+line3 = '# bestbeam = IM.I53US.BB.sac'
+
+def line_parser(line):
+    # your code here: (approx 8 lines)
+    key, value = [item.strip('# ') for item in line.split('=')]
+    try:  # convert single float value
+        value = float(value)
+    except ValueError:  # convert multiple float values
+        try:
+            value = [float(item.strip('() ')) for item in value.split(',')]
+        except ValueError:  # leave as tring
+            pass
+    # end your code
+    return key, value
+
+for line in (line1, line2, line3):
+    print(line_parser(line))
